@@ -290,8 +290,12 @@ file_names = sys.argv[1:]
 for fn in file_names:
   f = open(fn)
   sexp = f.read()
+
+  #filter comments
   sexp = sexp.split('\n')
   sexp = filter(lambda line: not re.match('^\s*#', line), sexp)
+ 
+  #rejoin lines
   sexp = '\n'.join(sexp)
   tokens = tokenize(sexp)
   p = Parser(tokens)
