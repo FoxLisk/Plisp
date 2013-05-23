@@ -3,12 +3,14 @@
     (if (== f 1)
        x
        y)))
-(defn (car cell)
-  (cell 1))
 
-(defn (cdr cell)
-  (cell 2))
+(define c (cons 1 (cons 2 3)))
+(print ((c 2) 1))
 
-(define c (cons 1 2))
-(print (car c))
-(print (cdr c))
+#(defn (car cell)
+#  (cell 1))
+#(defn (cdr cell)
+#  (cell 2))
+#
+#(define c (cons 1 (cons 2 3)))
+#(print (car (cdr c)))

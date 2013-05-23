@@ -16,6 +16,12 @@ default_fns['-'] = operator.sub
 default_fns['=='] = operator.eq
 
 
+class InterpretationError(Exception):
+  def __init__(self, value):
+    self.value = value
+  def __str__(self):
+    return self.value
+
 class Context():
   def __init__(self, parent = None):
     self.params = {}
@@ -38,37 +44,50 @@ class Context():
     elif self.parent is not None:
       return self.parent.get_val(name)
     else:
-      raise Exception('Name `' + name + '` is not defined')
+      raise InterpretationError('Name `' + name + '` is not defined')
+
+  def __str__(self):
+    out = str(self.params)
+    if self.parent is not None:
+      out += '\nParent: ' + str(self.parent)
+    return out
 
 class UserFunc():
   def __init__(self, name, param_names, code, context):
     self.name = name
     self.param_names = param_names
     self.code = code
-    #setup new context with passed in context as parent
-    self.context = Context(context)
+    self.creation_context = context
 
   def __call__(self, *args):
+    #print 'calling ' + self.name 
+    call_context = Context(self.creation_context)
+
     assignments = zip(self.param_names, args)
     for name, val in assignments:
-      self.context.set_val(name, val)
+      call_context.set_val(name, val)
+
+    #print 'all code: ' + str(self.code)
+
     for tree in self.code:
-      ret = exec_tree(self.code, self.context)
+      #print 'executing ' + str(tree)
+      #print '  with context ' + str(call_context)
+      ret = exec_tree(tree, call_context)
+
     return ret
     
 def __defn(tree, context):
   '''
   (defn (name param..) (code))
   '''
-  assert len(tree) == 3 #(defn (name param...) (sexp))
+  assert len(tree) >= 3 #(defn (name param...) (sexp))
   assert tree[0][0] == 'defn'
   args = tree[1]
   assert isinstance(tree[1], list) #args
   assert all(map(lambda tk: tk[1] == TokenType.IDENTIFIER, tree[1]))
   name = args[0][0]
   param_names = map(lambda tk: tk[0], args[1:])
-  code = tree[2]
-  assert isinstance(code, list) #must be an sexp
+  code = tree[2:]
   uf = UserFunc(name, param_names, code, context)
   context.set_val(name, uf)
   return uf
@@ -82,19 +101,21 @@ def __lambda(tree, context):
   args = tree[1]
   assert isinstance(tree[1], list) #args
   assert all(map(lambda tk: tk[1] == TokenType.IDENTIFIER, tree[1]))
-  name = args[0][0]
+  name = '__user_lambda_' + str(__lambda.num)
+  __lambda.num += 1
   param_names = map(lambda tk: tk[0], args)
-  code = tree[2]
-  assert isinstance(code, list) #must be an sexp
+  code = tree[2:]
   uf = UserFunc(name, param_names, code, context)
   return uf
+
+__lambda.num = 0
   
 def __if(tree, context):
   '''
   (if (cond) (true) (false))
   '''
   if len(tree) < 3 or len(tree) > 4:
-    raise Exception('Incorrect syntax for if block')
+    raise InterpretationError('Incorrect syntax for if block')
   assert tree[0][0] == 'if'
   cond = tree[1]
   result = parse_value(cond, context)
@@ -230,14 +251,13 @@ def get_fn(expr, context):
     elif fn_name in default_fns:
       return default_fns[fn_name]
     else:
-      raise Exception('Function `' + fn_name + '` not defined')
+      raise InterpretationError('Function `' + fn_name + '` not defined')
   elif isinstance(expr, list):
     if expr[0][1] == TokenType.IDENTIFIER \
       and expr[0][0] == 'lambda':
       return __lambda(expr, context)
   else:
-    print expr
-    raise Exception('(' + ','.join(map(lambda e: expr[0], expr)) + 'does not start with a function')
+    raise InterpretationError('(' + ','.join(map(lambda e: expr[0], expr)) + ') does not start with a function')
 
 def parse_value(expr, context):
   if is_value(expr):
@@ -267,6 +287,9 @@ file_names = sys.argv[1:]
 for fn in file_names:
   f = open(fn)
   sexp = f.read()
+  sexp = sexp.split('\n')
+  sexp = filter(lambda line: not re.match('^\s*#', line), sexp)
+  sexp = '\n'.join(sexp)
   tokens = tokenize(sexp)
   p = Parser(tokens)
   trees = p.build_tree()
@@ -274,5 +297,8 @@ for fn in file_names:
   global_context = Context()
 
   for tree in trees:
-    exec_tree(tree, global_context)
+    try:
+      exec_tree(tree, global_context)
+    except InterpretationError as e:
+      print e
   f.close()
