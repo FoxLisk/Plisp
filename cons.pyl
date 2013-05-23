@@ -5,12 +5,11 @@
        y)))
 
 (define c (cons 1 (cons 2 3)))
-(print ((c 2) 1))
 
-#(defn (car cell)
-#  (cell 1))
-#(defn (cdr cell)
-#  (cell 2))
-#
-#(define c (cons 1 (cons 2 3)))
-#(print (car (cdr c)))
+(defn (car cell)
+  (cell 1))
+(defn (cdr cell)
+  (cell 2))
+
+(define c (cons 1 (cons 2 3)))
+(print (car (cdr c)))

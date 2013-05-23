@@ -253,9 +253,12 @@ def get_fn(expr, context):
     else:
       raise InterpretationError('Function `' + fn_name + '` not defined')
   elif isinstance(expr, list):
+    print "getting func from list " + str(expr)
     if expr[0][1] == TokenType.IDENTIFIER \
       and expr[0][0] == 'lambda':
       return __lambda(expr, context)
+    else:
+      return exec_tree(expr, context)
   else:
     raise InterpretationError('(' + ','.join(map(lambda e: expr[0], expr)) + ') does not start with a function')
 
