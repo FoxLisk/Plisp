@@ -1,0 +1,14 @@
+(defn (cons x y)
+  (lambda (f) 
+    (if (== f 1)
+       x
+       y)))
+(defn (car cell)
+  (cell 1))
+
+(defn (cdr cell)
+  (cell 2))
+
+(define c (cons 1 2))
+(print (car c))
+(print (cdr c))
